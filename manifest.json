@@ -1,0 +1,123 @@
+{
+  "name": "HVSR Sismómetro - Medición de Vibraciones",
+  "short_name": "HVSR Sismómetro",
+  "id": "hvsr-seismometer-app",
+  "description": "Aplicación para medición de vibraciones sísmicas utilizando cociente espectral H/V según protocolo SESAME. Powered by Geoexplora - Desarrollado por Aristóteles Jaramillo",
+  "start_url": "./",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone"],
+  "orientation": "portrait",
+  "background_color": "#1e3c72",
+  "theme_color": "#1e3c72",
+  "scope": "/",
+  "lang": "es",
+  "dir": "ltr",
+  "icons": [
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "icon-256.png",
+      "sizes": "256x256",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-128.png",
+      "sizes": "128x128",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-64.png",
+      "sizes": "64x64",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "screenshot-mobile.png",
+      "sizes": "480x854",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Pantalla principal de medición HVSR con sensores en tiempo real"
+    },
+    {
+      "src": "screenshot-desktop.png",
+      "sizes": "1024x768",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Gráfico de resultados cociente espectral H/V con análisis SESAME"
+    }
+  ],
+  "categories": ["productivity", "utilities", "education", "tools"],
+  "launch_handler": {
+    "client_mode": "navigate-new"
+  },
+  "prefer_related_applications": false,
+  "related_applications": [],
+  "file_handlers": [
+    {
+      "action": "/",
+      "accept": {
+        "text/plain": [".txt"],
+        "text/csv": [".csv"],
+        "image/png": [".png"],
+        "application/json": [".json"]
+      },
+      "icons": [
+        {
+          "src": "icon-64.png",
+          "sizes": "64x64",
+          "type": "image/png"
+        }
+      ],
+      "launch_type": "single-client"
+    }
+  ],
+  "handle_links": "preferred",
+  "shortcuts": [
+    {
+      "name": "Nueva Medición HVSR",
+      "short_name": "Medir HVSR",
+      "description": "Iniciar nueva medición de cociente espectral H/V",
+      "url": "./?action=start_measurement",
+      "icons": [
+        {
+          "src": "icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Ver Resultados",
+      "short_name": "Resultados",
+      "description": "Ver últimos resultados de medición H/V",
+      "url": "./?action=view_results",
+      "icons": [
+        {
+          "src": "icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    }
+  ]
+}

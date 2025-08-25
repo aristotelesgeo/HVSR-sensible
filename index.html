@@ -1,0 +1,1304 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#1e3c72">
+    <title>HVSR Sismómetro Móvil</title>
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="manifest.json">
+    
+    <!-- Iconos -->
+    <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
+    <link rel="apple-touch-icon" sizes="512x512" href="icon-512.png">
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e3c72, #2a5298);
+            color: white;
+            min-height: 100vh;
+            padding: 10px;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+        
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            min-height: calc(100vh - 20px);
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 25px;
+        }
+        
+        .header h1 {
+            font-size: 24px;
+            margin-bottom: 8px;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        
+        .header p {
+            opacity: 0.9;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+        
+        .credits {
+            margin-top: 15px;
+            padding: 12px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            font-size: 12px;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .credits .powered {
+            margin-bottom: 6px;
+        }
+        
+        .credits .powered span {
+            color: #4ECDC4;
+            font-weight: bold;
+            font-size: 13px;
+        }
+        
+        .credits .developer span {
+            color: #FFE66D;
+            font-weight: 600;
+        }
+        
+        .status-panel {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .status-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+        
+        .status-label {
+            font-weight: 600;
+        }
+        
+        .status-value {
+            font-family: 'Courier New', monospace;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+        
+        .progress-container {
+            margin: 15px 0;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4CAF50, #8BC34A);
+            width: 0%;
+            transition: width 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 12px;
+        }
+        
+        .controls {
+            text-align: center;
+            margin: 20px 0;
+        }
+        
+        .btn {
+            background: linear-gradient(45deg, #FF6B6B, #4ECDC4);
+            border: none;
+            color: white;
+            padding: 12px 25px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            touch-action: manipulation;
+            -webkit-appearance: none;
+        }
+        
+        .btn:active {
+            transform: translateY(1px);
+        }
+        
+        .btn:disabled {
+            background: #666;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .btn-stop {
+            background: linear-gradient(45deg, #FF4757, #FF3742);
+        }
+        
+        .real-time-display {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 8px;
+            margin: 15px 0;
+        }
+        
+        .component-box {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            padding: 12px 8px;
+            text-align: center;
+        }
+        
+        .component-label {
+            font-size: 12px;
+            opacity: 0.8;
+            margin-bottom: 4px;
+        }
+        
+        .component-value {
+            font-size: 18px;
+            font-weight: bold;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .component-unit {
+            font-size: 10px;
+            opacity: 0.7;
+            margin-top: 2px;
+        }
+        
+        .x-component { border-left: 4px solid #FF6B6B; }
+        .y-component { border-left: 4px solid #4ECDC4; }
+        .z-component { border-left: 4px solid #FFE66D; }
+        
+        .chart-container {
+            background: white;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 20px 0;
+            display: none;
+        }
+        
+        #hvsrChart {
+            max-height: 300px;
+        }
+        
+        .results-panel {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 15px;
+            display: none;
+        }
+        
+        .results-title {
+            text-align: center;
+            font-size: 18px;
+            margin-bottom: 12px;
+            color: #4ECDC4;
+        }
+        
+        .results-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .result-item {
+            text-align: center;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 12px;
+            border-radius: 8px;
+        }
+        
+        .result-label {
+            font-size: 12px;
+            opacity: 0.8;
+            margin-bottom: 4px;
+        }
+        
+        .result-value {
+            font-size: 16px;
+            font-weight: bold;
+            color: #FFE66D;
+        }
+        
+        .save-btn {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            width: 100%;
+            margin-top: 10px;
+        }
+        
+        .warning {
+            background: rgba(255, 193, 7, 0.2);
+            border: 1px solid rgba(255, 193, 7, 0.5);
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 15px;
+            text-align: center;
+            font-size: 13px;
+        }
+        
+        .log-container {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            padding: 10px;
+            max-height: 150px;
+            overflow-y: auto;
+            margin-top: 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+        }
+        
+        .log-entry {
+            margin-bottom: 3px;
+            opacity: 0.8;
+            word-break: break-word;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.6; }
+            100% { opacity: 1; }
+        }
+        
+        .recording {
+            animation: pulse 1.5s infinite;
+        }
+        
+        .sensor-status {
+            text-align: center;
+            margin: 15px 0;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            font-size: 12px;
+        }
+        
+        .sensor-ok { 
+            border-left: 4px solid #4CAF50; 
+        }
+        
+        .sensor-error { 
+            border-left: 4px solid #FF4757; 
+        }
+        
+        /* Responsive para pantallas muy pequeñas */
+        @media (max-width: 360px) {
+            .container { padding: 15px; }
+            .header h1 { font-size: 20px; }
+            .btn { padding: 10px 20px; font-size: 14px; }
+            .component-value { font-size: 16px; }
+        }
+        
+        /* Prevenir zoom en inputs */
+        input, button, textarea, select {
+            font-size: 16px !important;
+        }
+        
+        /* Mejorar rendimiento */
+        * {
+            -webkit-transform: translateZ(0);
+            transform: translateZ(0);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🌍 HVSR Sismómetro</h1>
+            <p>Medición de Cociente Espectral H/V<br>Protocolo SESAME - <strong>Sensibilidad Máxima</strong></p>
+            <div class="credits">
+                <div class="powered">
+                    <span>⚡ Powered by Geoexplora</span>
+                </div>
+                <div class="developer">
+                    <span>🚀 Desarrollado por Aristóteles Jaramillo</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="sensor-status" id="sensorStatus">
+            <span id="sensorStatusText">Inicializando sensores...</span>
+        </div>
+        
+        <div class="warning">
+            ⚠️ Coloca el celular en superficie estable, pantalla hacia arriba.<br>
+            Evita vibraciones durante la medición (20 min). <strong>SENSIBILIDAD MÁXIMA ACTIVADA</strong>
+        </div>
+        
+        <div class="status-panel">
+            <div class="status-row">
+                <span class="status-label">Estado:</span>
+                <span class="status-value" id="status">Listo</span>
+            </div>
+            <div class="status-row">
+                <span class="status-label">Tiempo:</span>
+                <span class="status-value" id="time">00:00 / 20:00</span>
+            </div>
+            <div class="status-row">
+                <span class="status-label">Muestreo:</span>
+                <span class="status-value" id="sampling">~100 Hz</span>
+            </div>
+            <div class="status-row">
+                <span class="status-label">Ventanas:</span>
+                <span class="status-value" id="windows">0 / min. 20</span>
+            </div>
+            <div class="status-row">
+                <span class="status-label">Sensibilidad:</span>
+                <span class="status-value">MÁXIMA (10x)</span>
+            </div>
+            <div class="status-row">
+                <span class="status-label">Batería:</span>
+                <span class="status-value" id="battery">--</span>
+            </div>
+        </div>
+        
+        <div class="progress-container">
+            <div class="progress-bar">
+                <div class="progress-fill" id="progress">0%</div>
+            </div>
+        </div>
+        
+        <div class="real-time-display">
+            <div class="component-box x-component">
+                <div class="component-label">X (N-S)</div>
+                <div class="component-value" id="x-value">0.0000</div>
+                <div class="component-unit">m/s² (x10)</div>
+            </div>
+            <div class="component-box y-component">
+                <div class="component-label">Y (E-W)</div>
+                <div class="component-value" id="y-value">0.0000</div>
+                <div class="component-unit">m/s² (x10)</div>
+            </div>
+            <div class="component-box z-component">
+                <div class="component-label">Z (Vertical)</div>
+                <div class="component-value" id="z-value">0.0000</div>
+                <div class="component-unit">m/s² (x10)</div>
+            </div>
+        </div>
+        
+        <div class="controls">
+            <button class="btn" id="startBtn" onclick="startMeasurement()">
+                🎯 Iniciar Medición (20 min)
+            </button>
+            <button class="btn btn-stop" id="stopBtn" onclick="stopMeasurement()" style="display:none;">
+                ⏹️ Detener Medición
+            </button>
+        </div>
+        
+        <div class="log-container">
+            <div id="log"></div>
+        </div>
+        
+        <div class="chart-container" id="chartContainer">
+            <canvas id="hvsrChart"></canvas>
+        </div>
+        
+        <div class="results-panel" id="resultsPanel">
+            <div class="results-title">📊 Resultados HVSR</div>
+            <div class="results-grid">
+                <div class="result-item">
+                    <div class="result-label">Frecuencia Principal</div>
+                    <div class="result-value" id="peakFreq">-- Hz</div>
+                </div>
+                <div class="result-item">
+                    <div class="result-label">Amplitud H/V</div>
+                    <div class="result-value" id="peakAmp">--</div>
+                </div>
+                <div class="result-item">
+                    <div class="result-label">Ventanas Válidas</div>
+                    <div class="result-value" id="validWindows">--</div>
+                </div>
+                <div class="result-item">
+                    <div class="result-label">Confiabilidad SESAME</div>
+                    <div class="result-value" id="reliability">--</div>
+                </div>
+            </div>
+            <button class="btn save-btn" onclick="saveChart()">
+                💾 Guardar Gráfico H/V
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Variables globales optimizadas para máxima sensibilidad
+        let isRecording = false;
+        let accelerometerData = { x: [], y: [], z: [], timestamps: [] };
+        let startTime = null;
+        let displayInterval = null;
+        let currentAcceleration = { x: 0, y: 0, z: 0 };
+        let sensorPermissionGranted = false;
+        let actualSampleRate = 0;
+        let sampleCount = 0;
+        let lastSampleTime = 0;
+        let dcOffsetX = 0, dcOffsetY = 0, dcOffsetZ = 0;
+        let calibrationSamples = [];
+        
+        // Parámetros SESAME optimizados para MÁXIMA SENSIBILIDAD
+        const TARGET_SAMPLE_RATE = 100; // Hz
+        const RECORDING_TIME = 20 * 60 * 1000; // 20 minutos
+        const WINDOW_LENGTH = 90; // segundos
+        const WINDOW_OVERLAP = 0.5; // 50%
+        const MIN_WINDOWS = 15; // Reducido para mayor flexibilidad
+        const STA_LENGTH = 1; // segundo
+        const LTA_LENGTH = 30; // segundos
+        const STA_LTA_MIN = 0.1; // MÁXIMA SENSIBILIDAD - muy permisivo
+        const STA_LTA_MAX = 5.0; // Rango muy amplio
+        const SMOOTHING_CONSTANT = 40;
+        const FREQ_MIN = 0.1;
+        const FREQ_MAX = 40;
+        
+        // Parámetros de MÁXIMA SENSIBILIDAD
+        const SENSITIVITY_GAIN = 10.0; // Amplificación 10x
+        const NOISE_FLOOR = 0.0001; // Umbral de ruido ultra bajo
+        const MIN_SIGNAL_STRENGTH = 0.001; // Detectar señales mínimas
+        const DC_FILTER_ALPHA = 0.995; // Filtro DC muy agresivo
+        const SIGNAL_FILTER_ALPHA = 0.7; // Suavizado de señal
+        
+        // Logging optimizado
+        function addLog(message) {
+            const log = document.getElementById('log');
+            const time = new Date().toLocaleTimeString();
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            entry.textContent = `[${time}] ${message}`;
+            log.appendChild(entry);
+            
+            // Limitar entradas del log para rendimiento
+            while (log.children.length > 50) {
+                log.removeChild(log.firstChild);
+            }
+            
+            log.scrollTop = log.scrollHeight;
+            console.log(`HVSR: ${message}`);
+        }
+        
+        // Detección de batería
+        function updateBatteryStatus() {
+            if ('getBattery' in navigator) {
+                navigator.getBattery().then(function(battery) {
+                    const level = Math.round(battery.level * 100);
+                    document.getElementById('battery').textContent = `${level}%`;
+                    
+                    if (level < 20 && isRecording) {
+                        addLog(`ADVERTENCIA: Batería baja (${level}%)`);
+                    }
+                });
+            }
+        }
+        
+        // Inicialización de sensores con MÁXIMA SENSIBILIDAD
+        function initializeSensors() {
+            addLog('Inicializando sensores - MODO SENSIBILIDAD MÁXIMA');
+            
+            // Verificar disponibilidad de sensores
+            if (!window.DeviceMotionEvent) {
+                updateSensorStatus('ERROR: Sensores no disponibles', false);
+                return;
+            }
+            
+            // Solicitar permisos si es necesario (iOS 13+)
+            if (typeof DeviceMotionEvent.requestPermission === 'function') {
+                DeviceMotionEvent.requestPermission()
+                    .then(permissionState => {
+                        if (permissionState === 'granted') {
+                            setupMotionListener();
+                            updateSensorStatus('Sensores ULTRA-SENSIBLES activos', true);
+                            sensorPermissionGranted = true;
+                            startCalibration();
+                        } else {
+                            updateSensorStatus('Permisos denegados', false);
+                        }
+                    })
+                    .catch(error => {
+                        addLog('ERROR permisos: ' + error.message);
+                        updateSensorStatus('Error de permisos', false);
+                    });
+            } else {
+                setupMotionListener();
+                updateSensorStatus('Sensores ULTRA-SENSIBLES activos', true);
+                sensorPermissionGranted = true;
+                startCalibration();
+            }
+            
+            // Actualizar batería
+            updateBatteryStatus();
+            setInterval(updateBatteryStatus, 30000);
+        }
+        
+        // Calibración automática para eliminar offset DC
+        function startCalibration() {
+            addLog('Iniciando calibración automática para sensibilidad máxima...');
+            calibrationSamples = [];
+            
+            setTimeout(() => {
+                if (calibrationSamples.length > 100) {
+                    dcOffsetX = calibrationSamples.reduce((sum, s) => sum + s.x, 0) / calibrationSamples.length;
+                    dcOffsetY = calibrationSamples.reduce((sum, s) => sum + s.y, 0) / calibrationSamples.length;
+                    dcOffsetZ = calibrationSamples.reduce((sum, s) => sum + s.z, 0) / calibrationSamples.length;
+                    addLog(`Calibración completada: DC offset X=${dcOffsetX.toFixed(4)}, Y=${dcOffsetY.toFixed(4)}, Z=${dcOffsetZ.toFixed(4)}`);
+                }
+                calibrationSamples = null; // Liberar memoria
+            }, 3000);
+        }
+        
+        function updateSensorStatus(message, isOk) {
+            const statusElement = document.getElementById('sensorStatus');
+            const textElement = document.getElementById('sensorStatusText');
+            
+            textElement.textContent = message;
+            statusElement.className = isOk ? 'sensor-status sensor-ok' : 'sensor-status sensor-error';
+            
+            addLog(message);
+        }
+        
+        function setupMotionListener() {
+            window.addEventListener('devicemotion', handleMotion, true);
+            addLog('Listener de movimiento configurado - SENSIBILIDAD MÁXIMA');
+            
+            // Test de frecuencia de muestreo
+            setTimeout(() => {
+                if (sampleCount > 0) {
+                    const elapsed = (Date.now() - lastSampleTime) / 1000;
+                    actualSampleRate = Math.round(sampleCount / elapsed);
+                    document.getElementById('sampling').textContent = `${actualSampleRate} Hz`;
+                    addLog(`Frecuencia de muestreo real: ${actualSampleRate} Hz`);
+                }
+            }, 5000);
+        }
+        
+        // Procesamiento de movimiento con SENSIBILIDAD MÁXIMA
+        function handleMotion(event) {
+            const now = Date.now();
+            
+            if (event.accelerationIncludingGravity) {
+                // Actualizar contador para calcular frecuencia real
+                if (lastSampleTime === 0) lastSampleTime = now;
+                sampleCount++;
+                
+                // Obtener valores RAW
+                let rawX = event.accelerationIncludingGravity.x || 0;
+                let rawY = event.accelerationIncludingGravity.y || 0;
+                let rawZ = event.accelerationIncludingGravity.z || 0;
+                
+                // Durante calibración, recolectar muestras
+                if (calibrationSamples !== null) {
+                    calibrationSamples.push({x: rawX, y: rawY, z: rawZ});
+                }
+                
+                // Aplicar MÁXIMA AMPLIFICACIÓN
+                rawX *= SENSITIVITY_GAIN;
+                rawY *= SENSITIVITY_GAIN;
+                rawZ *= SENSITIVITY_GAIN;
+                
+                // Eliminar offset DC con calibración
+                rawX -= (dcOffsetX * SENSITIVITY_GAIN);
+                rawY -= (dcOffsetY * SENSITIVITY_GAIN);
+                rawZ -= (dcOffsetZ * SENSITIVITY_GAIN);
+                
+                // Filtro pasa-altos ultra-agresivo para eliminar deriva
+                if (currentAcceleration.x !== 0) {
+                    rawX = rawX - (currentAcceleration.x * DC_FILTER_ALPHA);
+                    rawY = rawY - (currentAcceleration.y * DC_FILTER_ALPHA);
+                    rawZ = rawZ - (currentAcceleration.z * DC_FILTER_ALPHA);
+                }
+                
+                // Filtro anti-aliasing y suavizado óptimo
+                currentAcceleration.x = SIGNAL_FILTER_ALPHA * rawX + (1 - SIGNAL_FILTER_ALPHA) * currentAcceleration.x;
+                currentAcceleration.y = SIGNAL_FILTER_ALPHA * rawY + (1 - SIGNAL_FILTER_ALPHA) * currentAcceleration.y;
+                currentAcceleration.z = SIGNAL_FILTER_ALPHA * rawZ + (1 - SIGNAL_FILTER_ALPHA) * currentAcceleration.z;
+                
+                // Actualizar display con MÁXIMA PRECISIÓN
+                if (now - lastSampleTime > 50) { // Actualizar cada 50ms para mejor respuesta
+                    document.getElementById('x-value').textContent = currentAcceleration.x.toFixed(4);
+                    document.getElementById('y-value').textContent = currentAcceleration.y.toFixed(4);
+                    document.getElementById('z-value').textContent = currentAcceleration.z.toFixed(4);
+                    lastSampleTime = now;
+                }
+                
+                // Grabar datos con filtro de ruido ultra-bajo
+                if (isRecording) {
+                    const magnitude = Math.sqrt(currentAcceleration.x**2 + currentAcceleration.y**2 + currentAcceleration.z**2);
+                    if (magnitude > NOISE_FLOOR) {
+                        accelerometerData.x.push(currentAcceleration.x);
+                        accelerometerData.y.push(currentAcceleration.y);
+                        accelerometerData.z.push(currentAcceleration.z);
+                        accelerometerData.timestamps.push(now);
+                    }
+                }
+            }
+        }
+        
+        // Control de medición
+        function startMeasurement() {
+            if (!sensorPermissionGranted) {
+                alert('Error: Sensores no disponibles. Verifica permisos.');
+                return;
+            }
+            
+            if (!isRecording) {
+                isRecording = true;
+                startTime = Date.now();
+                accelerometerData = { x: [], y: [], z: [], timestamps: [] };
+                sampleCount = 0;
+                
+                document.getElementById('startBtn').style.display = 'none';
+                document.getElementById('stopBtn').style.display = 'inline-block';
+                document.getElementById('status').textContent = 'Grabando...';
+                document.querySelector('.container').classList.add('recording');
+                
+                // Prevenir que la pantalla se apague
+                if ('wakeLock' in navigator) {
+                    navigator.wakeLock.request('screen').then(wakeLock => {
+                        addLog('Pantalla mantenida activa');
+                    }).catch(err => {
+                        addLog('No se pudo mantener pantalla activa');
+                    });
+                }
+                
+                addLog('=== INICIANDO MEDICIÓN HVSR - SENSIBILIDAD MÁXIMA ===');
+                addLog('Amplificación: 10x, Umbral: ultra-bajo, STA/LTA: 0.1-5.0');
+                addLog('ADVERTENCIA: Sensibilidad máxima activada - evita cualquier vibración');
+                
+                // Actualizar progreso cada segundo
+                displayInterval = setInterval(updateProgress, 1000);
+                
+                // Auto-stop después de 20 minutos
+                setTimeout(() => {
+                    if (isRecording) {
+                        addLog('Tiempo completado - deteniendo automáticamente');
+                        stopMeasurement();
+                    }
+                }, RECORDING_TIME);
+            }
+        }
+        
+        function stopMeasurement() {
+            if (isRecording) {
+                isRecording = false;
+                clearInterval(displayInterval);
+                
+                document.getElementById('startBtn').style.display = 'inline-block';
+                document.getElementById('stopBtn').style.display = 'none';
+                document.getElementById('status').textContent = 'Procesando...';
+                document.querySelector('.container').classList.remove('recording');
+                
+                const duration = (Date.now() - startTime) / 1000;
+                const avgSampleRate = accelerometerData.x.length / duration;
+                
+                addLog(`Medición completada: ${duration.toFixed(1)}s`);
+                addLog(`Muestras ultra-sensibles: ${accelerometerData.x.length}, ~${avgSampleRate.toFixed(1)} Hz`);
+                
+                // Procesar con delay para UI
+                setTimeout(processHVSR, 1000);
+            }
+        }
+        
+        function updateProgress() {
+            if (startTime && isRecording) {
+                const elapsed = Date.now() - startTime;
+                const progress = Math.min((elapsed / RECORDING_TIME) * 100, 100);
+                const minutes = Math.floor(elapsed / 60000);
+                const seconds = Math.floor((elapsed % 60000) / 1000);
+                
+                document.getElementById('progress').style.width = `${progress}%`;
+                document.getElementById('progress').textContent = `${progress.toFixed(1)}%`;
+                document.getElementById('time').textContent = 
+                    `${minutes.toString().padStart(2,'0')}:${seconds.toString().padStart(2,'0')} / 20:00`;
+                
+                // Actualizar contador de muestras
+                if (elapsed > 10000) { // Después de 10 segundos
+                    const expectedSamples = (elapsed / 1000) * TARGET_SAMPLE_RATE;
+                    const efficiency = (accelerometerData.x.length / expectedSamples) * 100;
+                    document.getElementById('sampling').textContent = `${efficiency.toFixed(0)}% efic.`;
+                }
+            }
+        }
+        
+        // FFT optimizada para móviles
+        function fft(signal) {
+            const N = signal.length;
+            if (N <= 1) return signal.map(x => ({ real: x, imag: 0 }));
+            
+            const nextPow2 = Math.pow(2, Math.ceil(Math.log2(N)));
+            if (N < nextPow2) {
+                const padded = [...signal];
+                while (padded.length < nextPow2) padded.push(0);
+                return fft(padded);
+            }
+            
+            const even = [];
+            const odd = [];
+            for (let i = 0; i < N; i += 2) {
+                even.push(signal[i]);
+                if (i + 1 < N) odd.push(signal[i + 1]);
+            }
+            
+            const evenFft = fft(even);
+            const oddFft = fft(odd);
+            const result = new Array(N);
+            
+            for (let k = 0; k < N / 2; k++) {
+                const angle = -2 * Math.PI * k / N;
+                const cos = Math.cos(angle);
+                const sin = Math.sin(angle);
+                
+                const oddReal = oddFft[k] ? oddFft[k].real : 0;
+                const oddImag = oddFft[k] ? oddFft[k].imag : 0;
+                
+                const oddTerm = {
+                    real: cos * oddReal - sin * oddImag,
+                    imag: cos * oddImag + sin * oddReal
+                };
+                
+                result[k] = {
+                    real: evenFft[k].real + oddTerm.real,
+                    imag: evenFft[k].imag + oddTerm.imag
+                };
+                result[k + N/2] = {
+                    real: evenFft[k].real - oddTerm.real,
+                    imag: evenFft[k].imag - oddTerm.imag
+                };
+            }
+            
+            return result;
+        }
+        
+        function getMagnitude(complexArray) {
+            return complexArray.map(c => Math.sqrt(c.real * c.real + c.imag * c.imag));
+        }
+        
+        // Suavizado Konno-Ohmachi optimizado
+        function konnoOmachiSmoothing(spectrum, frequencies, b = SMOOTHING_CONSTANT) {
+            const smoothed = new Array(spectrum.length);
+            const logB = Math.log(10) * b;
+            
+            for (let i = 0; i < spectrum.length; i++) {
+                let sum = 0;
+                let weightSum = 0;
+                const fc = frequencies[i];
+                
+                if (fc <= 0) {
+                    smoothed[i] = spectrum[i];
+                    continue;
+                }
+                
+                const logFc = Math.log(fc);
+                
+                for (let j = 0; j < spectrum.length; j++) {
+                    const f = frequencies[j];
+                    if (f <= 0) continue;
+                    
+                    let weight;
+                    if (Math.abs(f - fc) < fc * 1e-10) {
+                        weight = 1.0;
+                    } else {
+                        const x = logB * (Math.log(f) - logFc);
+                        const sinx = Math.sin(x);
+                        weight = Math.pow(sinx / x, 4);
+                    }
+                    
+                    sum += weight * spectrum[j];
+                    weightSum += weight;
+                }
+                
+                smoothed[i] = weightSum > 0 ? sum / weightSum : spectrum[i];
+            }
+            
+            return smoothed;
+        }
+        
+        // Anti-triggering ULTRA-SENSIBLE
+        function antiTriggeringSelection(data, sampleRate) {
+            const staLength = Math.max(1, Math.round(STA_LENGTH * sampleRate));
+            const ltaLength = Math.max(10, Math.round(LTA_LENGTH * sampleRate));
+            const windowLength = Math.round(WINDOW_LENGTH * sampleRate);
+            const overlap = Math.round(windowLength * WINDOW_OVERLAP);
+            const step = Math.max(1, windowLength - overlap);
+            
+            const validWindows = [];
+            addLog(`Analizando ventanas con SENSIBILIDAD MÁXIMA: ${Math.floor(data.length / step)} posibles`);
+            
+            // Pre-procesamiento para ultra sensibilidad
+            const mean = data.reduce((a, b) => a + b, 0) / data.length;
+            const filteredData = data.map(x => x - mean);
+            
+            for (let start = 0; start + windowLength <= filteredData.length; start += step) {
+                let validSamples = 0;
+                let totalChecked = 0;
+                
+                // Verificar cada 3 muestras para máxima resolución
+                for (let i = start + ltaLength; i < start + windowLength - staLength; i += 3) {
+                    let sta = 0, lta = 0;
+                    
+                    // Usar energía RMS para máxima sensibilidad
+                    for (let j = 0; j < staLength; j++) {
+                        const sample = filteredData[Math.min(i + j, filteredData.length - 1)];
+                        sta += sample * sample;
+                    }
+                    sta = Math.sqrt(sta / staLength);
+                    
+                    for (let j = 0; j < ltaLength; j++) {
+                        const sample = filteredData[Math.max(0, i - ltaLength + j)];
+                        lta += sample * sample;
+                    }
+                    lta = Math.sqrt(lta / ltaLength);
+                    
+                    const ratio = lta > MIN_SIGNAL_STRENGTH ? sta / lta : 1;
+                    
+                    // Criterios ULTRA-SENSIBLES
+                    if (ratio >= STA_LTA_MIN && ratio <= STA_LTA_MAX) {
+                        validSamples++;
+                    }
+                    totalChecked++;
+                }
+                
+                // Ventana válida si >50% de las muestras pasan (ultra-permisivo)
+                if (totalChecked > 0 && (validSamples / totalChecked) > 0.5) {
+                    validWindows.push({
+                        start: start,
+                        end: start + windowLength,
+                        data: filteredData.slice(start, start + windowLength)
+                    });
+                }
+            }
+            
+            return validWindows;
+        }
+        
+        // Ventana Hanning optimizada
+        function applyHanningWindow(data) {
+            const N = data.length;
+            const windowed = new Array(N);
+            const factor = 2 * Math.PI / (N - 1);
+            
+            for (let i = 0; i < N; i++) {
+                windowed[i] = data[i] * 0.5 * (1 - Math.cos(factor * i));
+            }
+            
+            return windowed;
+        }
+        
+        // Procesamiento HVSR principal
+        async function processHVSR() {
+            try {
+                addLog('=== INICIANDO PROCESAMIENTO HVSR ULTRA-SENSIBLE ===');
+                document.getElementById('status').textContent = 'Procesando HVSR...';
+                
+                if (accelerometerData.x.length < TARGET_SAMPLE_RATE * 60) {
+                    throw new Error(`Datos insuficientes: ${accelerometerData.x.length} muestras`);
+                }
+                
+                // Calcular frecuencia de muestreo real
+                const duration = (accelerometerData.timestamps[accelerometerData.timestamps.length - 1] - 
+                                accelerometerData.timestamps[0]) / 1000;
+                const actualSampleRate = accelerometerData.x.length / duration;
+                addLog(`Duración: ${duration.toFixed(1)}s, Freq. real: ${actualSampleRate.toFixed(1)} Hz`);
+                
+                // Anti-triggering ULTRA-SENSIBLE
+                addLog('Aplicando anti-triggering ULTRA-SENSIBLE (STA/LTA: 0.1-5.0)...');
+                const [validWindowsX, validWindowsY, validWindowsZ] = await Promise.all([
+                    Promise.resolve(antiTriggeringSelection(accelerometerData.x, actualSampleRate)),
+                    Promise.resolve(antiTriggeringSelection(accelerometerData.y, actualSampleRate)),
+                    Promise.resolve(antiTriggeringSelection(accelerometerData.z, actualSampleRate))
+                ]);
+                
+                // Encontrar ventanas válidas comunes
+                const minLength = Math.min(validWindowsX.length, validWindowsY.length, validWindowsZ.length);
+                const commonValidWindows = [];
+                
+                for (let i = 0; i < minLength; i++) {
+                    if (validWindowsX[i] && validWindowsY[i] && validWindowsZ[i]) {
+                        commonValidWindows.push({
+                            x: validWindowsX[i].data,
+                            y: validWindowsY[i].data,
+                            z: validWindowsZ[i].data
+                        });
+                    }
+                }
+                
+                addLog(`Ventanas ultra-sensibles: ${commonValidWindows.length} (mín. requerido: ${MIN_WINDOWS})`);
+                document.getElementById('windows').textContent = `${commonValidWindows.length} / min. ${MIN_WINDOWS}`;
+                
+                if (commonValidWindows.length < MIN_WINDOWS) {
+                    throw new Error(`Ventanas insuficientes: ${commonValidWindows.length} < ${MIN_WINDOWS}`);
+                }
+                
+                // Procesar ventanas
+                addLog('Calculando FFT con datos ultra-sensibles...');
+                document.getElementById('status').textContent = 'Calculando FFT...';
+                
+                const hvsrRatios = [];
+                const windowSamples = WINDOW_LENGTH * actualSampleRate;
+                const frequencies = [];
+                
+                // Array de frecuencias
+                for (let i = 0; i <= Math.floor(windowSamples / 2); i++) {
+                    frequencies.push(i * actualSampleRate / windowSamples);
+                }
+                
+                let processedWindows = 0;
+                for (const window of commonValidWindows) {
+                    // Aplicar ventana Hanning
+                    const windowed = {
+                        x: applyHanningWindow(window.x),
+                        y: applyHanningWindow(window.y),
+                        z: applyHanningWindow(window.z)
+                    };
+                    
+                    // FFT
+                    const [fftX, fftY, fftZ] = await Promise.all([
+                        Promise.resolve(fft(windowed.x)),
+                        Promise.resolve(fft(windowed.y)),
+                        Promise.resolve(fft(windowed.z))
+                    ]);
+                    
+                    // Magnitudes
+                    const magX = getMagnitude(fftX);
+                    const magY = getMagnitude(fftY);
+                    const magZ = getMagnitude(fftZ);
+                    
+                    // H y V
+                    const H = [];
+                    const V = [];
+                    const halfLength = Math.min(magX.length / 2, frequencies.length);
+                    
+                    for (let i = 0; i < halfLength; i++) {
+                        H.push(Math.sqrt((magX[i] * magX[i] + magY[i] * magY[i]) / 2));
+                        V.push(magZ[i]);
+                    }
+                    
+                    // Suavizado
+                    const smoothH = konnoOmachiSmoothing(H, frequencies.slice(0, H.length));
+                    const smoothV = konnoOmachiSmoothing(V, frequencies.slice(0, V.length));
+                    
+                    // H/V ratio
+                    const hvsr = [];
+                    for (let i = 0; i < smoothH.length; i++) {
+                        hvsr.push(smoothV[i] > 0 ? smoothH[i] / smoothV[i] : 0);
+                    }
+                    
+                    hvsrRatios.push(hvsr);
+                    processedWindows++;
+                    
+                    // Actualizar progreso
+                    if (processedWindows % 3 === 0) {
+                        const progress = (processedWindows / commonValidWindows.length) * 100;
+                        addLog(`Procesadas ${processedWindows}/${commonValidWindows.length} ventanas (${progress.toFixed(0)}%)`);
+                    }
+                }
+                
+                // Promediar todos los ratios H/V
+                addLog('Calculando estadísticas ultra-precisas H/V...');
+                document.getElementById('status').textContent = 'Calculando estadísticas...';
+                
+                const avgHVSR = [];
+                const stdHVSR = [];
+                
+                for (let i = 0; i < hvsrRatios[0].length; i++) {
+                    const values = hvsrRatios.map(ratio => ratio[i]).filter(v => v > 0 && isFinite(v));
+                    
+                    if (values.length > 0) {
+                        const mean = values.reduce((a, b) => a + b) / values.length;
+                        const variance = values.reduce((acc, val) => acc + Math.pow(val - mean, 2), 0) / values.length;
+                        avgHVSR.push(mean);
+                        stdHVSR.push(Math.sqrt(variance));
+                    } else {
+                        avgHVSR.push(0);
+                        stdHVSR.push(0);
+                    }
+                }
+                
+                // Filtrar por rango de frecuencias
+                const filteredData = [];
+                for (let i = 0; i < frequencies.length && i < avgHVSR.length; i++) {
+                    if (frequencies[i] >= FREQ_MIN && frequencies[i] <= FREQ_MAX) {
+                        filteredData.push({
+                            freq: frequencies[i],
+                            hvsr: avgHVSR[i],
+                            std: stdHVSR[i]
+                        });
+                    }
+                }
+                
+                // Encontrar pico principal con sensibilidad máxima
+                let peakIndex = 0;
+                let maxAmplitude = 0;
+                
+                for (let i = 0; i < filteredData.length; i++) {
+                    if (filteredData[i].hvsr > maxAmplitude && filteredData[i].freq > 0.2) { // Umbral más bajo
+                        maxAmplitude = filteredData[i].hvsr;
+                        peakIndex = i;
+                    }
+                }
+                
+                const peakFrequency = filteredData[peakIndex].freq;
+                const peakAmplitude = maxAmplitude;
+                
+                // Evaluación de confiabilidad ULTRA-SENSIBLE
+                let reliability = 'Incierta';
+                let reliabilityScore = 0;
+                
+                // Criterios adaptados para ultra sensibilidad
+                if (commonValidWindows.length >= MIN_WINDOWS) reliabilityScore++;
+                if (peakAmplitude >= 1.5) reliabilityScore++; // Umbral más bajo
+                if (peakAmplitude >= 2.5) reliabilityScore++;
+                
+                const peakStd = filteredData[peakIndex].std;
+                if (peakStd / peakAmplitude < 0.4) reliabilityScore++; // Más permisivo
+                
+                if (reliabilityScore >= 3) reliability = 'Buena';
+                else if (reliabilityScore >= 2) reliability = 'Aceptable';
+                
+                // Actualizar resultados
+                document.getElementById('peakFreq').textContent = `${peakFrequency.toFixed(3)} Hz`;
+                document.getElementById('peakAmp').textContent = peakAmplitude.toFixed(3);
+                document.getElementById('validWindows').textContent = commonValidWindows.length;
+                document.getElementById('reliability').textContent = reliability;
+                
+                addLog(`RESULTADOS ULTRA-SENSIBLES: f0=${peakFrequency.toFixed(3)} Hz, A=${peakAmplitude.toFixed(3)}, Conf=${reliability}`);
+                
+                // Crear gráfico
+                createHVSRChart(
+                    filteredData.map(d => d.freq),
+                    filteredData.map(d => d.hvsr),
+                    filteredData.map(d => d.std),
+                    peakFrequency,
+                    peakAmplitude
+                );
+                
+                document.getElementById('status').textContent = '✅ Completado';
+                document.getElementById('chartContainer').style.display = 'block';
+                document.getElementById('resultsPanel').style.display = 'block';
+                
+                addLog('=== PROCESAMIENTO HVSR ULTRA-SENSIBLE COMPLETADO ===');
+                
+            } catch (error) {
+                addLog(`ERROR: ${error.message}`);
+                console.error('Error procesando HVSR:', error);
+                alert(`Error en procesamiento: ${error.message}`);
+                document.getElementById('status').textContent = '❌ Error';
+            }
+        }
+        
+        // Crear gráfico H/V optimizado
+        let hvsrChart = null;
+        
+        function createHVSRChart(frequencies, hvsr, std, peakFreq, peakAmp) {
+            const ctx = document.getElementById('hvsrChart').getContext('2d');
+            
+            if (hvsrChart) {
+                hvsrChart.destroy();
+            }
+            
+            const chartData = frequencies.map((freq, i) => ({ x: freq, y: hvsr[i] }));
+            
+            hvsrChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    datasets: [{
+                        label: 'H/V Ratio (Sensibilidad Máxima 10x)',
+                        data: chartData,
+                        borderColor: '#FF6B6B',
+                        backgroundColor: 'rgba(255, 107, 107, 0.1)',
+                        borderWidth: 2,
+                        fill: false,
+                        tension: 0.1,
+                        pointRadius: 0,
+                        pointHoverRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: {
+                        duration: 1000
+                    },
+                    scales: {
+                        x: {
+                            type: 'logarithmic',
+                            position: 'bottom',
+                            title: {
+                                display: true,
+                                text: 'Frecuencia (Hz)',
+                                font: { size: 12, weight: 'bold' }
+                            },
+                            min: Math.max(FREQ_MIN, 0.1),
+                            max: Math.min(FREQ_MAX, frequencies[frequencies.length - 1]),
+                            grid: { color: 'rgba(0,0,0,0.1)' }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Ratio H/V',
+                                font: { size: 12, weight: 'bold' }
+                            },
+                            min: 0,
+                            grid: { color: 'rgba(0,0,0,0.1)' }
+                        }
+                    },
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: `HVSR Ultra-Sensible - Pico: ${peakFreq.toFixed(3)} Hz (Amplitud: ${peakAmp.toFixed(3)})`,
+                            font: { size: 14, weight: 'bold' }
+                        },
+                        legend: {
+                            display: true
+                        }
+                    },
+                    interaction: {
+                        intersect: false,
+                        mode: 'index'
+                    }
+                }
+            });
+            
+            addLog('Gráfico H/V ultra-sensible creado exitosamente');
+        }
+        
+        // Guardar gráfico mejorado para APK
+        function saveChart() {
+            if (hvsrChart) {
+                const canvas = document.getElementById('hvsrChart');
+                
+                // Crear imagen de alta calidad
+                const url = canvas.toDataURL('image/png', 1.0);
+                const timestamp = new Date().toISOString().slice(0,16).replace(/:/g,'-');
+                const peakFreq = document.getElementById('peakFreq').textContent;
+                const filename = `HVSR_MaxSens_${peakFreq}_${timestamp}.png`;
+                
+                // Método 1: Descarga directa
+                const link = document.createElement('a');
+                link.download = filename;
+                link.href = url;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                // Método 2: Compartir nativo si disponible
+                if (navigator.share && navigator.canShare) {
+                    canvas.toBlob(blob => {
+                        if (blob) {
+                            const file = new File([blob], filename, { type: 'image/png' });
+                            if (navigator.canShare({ files: [file] })) {
+                                navigator.share({
+                                    files: [file],
+                                    title: 'Gráfico HVSR - Sensibilidad Máxima',
+                                    text: `Cociente Espectral H/V (10x sensibilidad) - Pico: ${peakFreq}`
+                                }).then(() => {
+                                    addLog('Gráfico compartido exitosamente');
+                                }).catch(err => {
+                                    addLog('Error al compartir: ' + err.message);
+                                });
+                            }
+                        }
+                    });
+                }
+                
+                addLog(`Gráfico guardado: ${filename}`);
+            } else {
+                alert('No hay gráfico disponible para guardar');
+            }
+        }
+        
+        // Inicialización principal
+        document.addEventListener('DOMContentLoaded', function() {
+            addLog('🚀 HVSR Sismómetro Móvil iniciado - SENSIBILIDAD MÁXIMA');
+            addLog('⚡ Powered by Geoexplora - Desarrollado por Aristóteles Jaramillo');
+            addLog('🔥 MODO ULTRA-SENSIBLE: Amplificación 10x, Filtros optimizados');
+            addLog('⚙️ Configuración: STA/LTA 0.1-5.0, Umbral ultra-bajo, Calibración automática');
+            
+            // Verificar capacidades del dispositivo
+            const features = [];
+            if (window.DeviceMotionEvent) features.push('✅ Acelerómetro ULTRA-SENSIBLE');
+            else features.push('❌ Acelerómetro');
+            
+            if ('wakeLock' in navigator) features.push('✅ Wake Lock');
+            else features.push('⚠️ Wake Lock');
+            
+            if ('getBattery' in navigator) features.push('✅ Batería');
+            else features.push('⚠️ Batería');
+            
+            if (navigator.share) features.push('✅ Compartir');
+            else features.push('⚠️ Compartir');
+            
+            addLog(`Capacidades: ${features.join(', ')}`);
+            
+            // Inicializar sensores
+            if (window.DeviceMotionEvent) {
+                initializeSensors();
+            } else {
+                updateSensorStatus('ERROR: Dispositivo no compatible', false);
+                alert('Este dispositivo no soporta sensores de movimiento requeridos para HVSR.');
+            }
+            
+            // Detectar orientación
+            if (screen.orientation) {
+                addLog(`Orientación: ${screen.orientation.type}`);
+                screen.orientation.addEventListener('change', () => {
+                    addLog(`Orientación cambió a: ${screen.orientation.type}`);
+                });
+            }
+        });
+        
+        // Prevenir cierre accidental durante medición
+        window.addEventListener('beforeunload', function(e) {
+            if (isRecording) {
+                e.preventDefault();
+                e.returnValue = '¿Seguro que quieres salir? La medición se perderá.';
+                return e.returnValue;
+            }
+        });
+        
+        // Manejo de errores globales
+        window.addEventListener('error', function(e) {
+            addLog(`ERROR JS: ${e.message}`);
+            console.error('Error global:', e);
+        });
+        
+        addLog('Aplicación lista para usar 📱 - SENSIBILIDAD MÁXIMA ACTIVADA');
+    </script>
+</body>
+</html>
